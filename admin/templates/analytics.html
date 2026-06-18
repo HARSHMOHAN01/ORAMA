@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics | Pothole Admin{% endblock %}
+{% block page_title %}System Analytics{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Analytics Summary Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon-wrapper red">
+            <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Total Logs</span>
+            <h3 class="stat-value">{{ stats.total_potholes }}</h3>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon-wrapper blue">
+            <i class="fa-solid fa-calculator"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-label">Avg Potholes / Device</span>
+            <h3 class="stat-value">
+                {% if stats.active_devices > 0 %}
+                    {{ (stats.total_potholes / stats.active_devices)|round(2) }}
+                {% else %}
+                    0
+                {% endif %}
+            </h3>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="charts-grid">
+    <!-- Device Pothole Distribution -->
+    <div class="chart-container-card">
+        <h3><i class="fa-solid fa-chart-column"></i> Detections by Device ID</h3>
+        <div class="chart-wrapper">
+            <canvas id="deviceChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Hourly Pothole Detections -->
+    <div class="chart-container-card">
+        <h3><i class="fa-solid fa-chart-area"></i> Hourly Detections Frequency</h3>
+        <div class="chart-wrapper">
+            <canvas id="hourlyChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Data passed from Flask
+    const deviceLabels = {{ device_data.keys()|list|tojson }};
+    const deviceCounts = {{ device_data.values()|list|tojson }};
+    
+    const hourlyCounts = {{ hour_data|tojson }};
+    const hourlyLabels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+
+    // Device Chart
+    const ctxDevice = document.getElementById('deviceChart').getContext('2d');
+    new Chart(ctxDevice, {
+        type: 'bar',
+        data: {
+            labels: deviceLabels.length > 0 ? deviceLabels : ['No Data'],
+            datasets: [{
+                label: 'Pothole Count',
+                data: deviceCounts.length > 0 ? deviceCounts : [0],
+                backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderWidth: 1.5,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+
+    // Hourly Chart
+    const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+    new Chart(ctxHourly, {
+        type: 'line',
+        data: {
+            labels: hourlyLabels,
+            datasets: [{
+                label: 'Detections',
+                data: hourlyCounts,
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(59, 130, 246, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
